@@ -5,5 +5,11 @@ description = "A production-grade RAG system over the arXiv research literature.
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
+    "httpx>=0.28.1",
     "pydantic>=2.13.4",
+    "pymupdf>=1.27.2.3",
+    "tenacity>=9.1.4",
 ]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
