@@ -1,0 +1,9 @@
+[project]
+name = "scholar-rag"
+version = "0.1.0"
+description = "A production-grade RAG system over the arXiv research literature."
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "pydantic>=2.13.4",
+]

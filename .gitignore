@@ -1,0 +1,17 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+
+# Project data artifacts (the SQLite db, FAISS index, downloaded PDFs)
+data/
+
+# Env
+.env
+
+#idea
+.idea/
