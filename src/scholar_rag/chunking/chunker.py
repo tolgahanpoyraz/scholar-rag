@@ -41,12 +41,12 @@ class RecursiveChunker:
 
         sep, *rest = separators
         if sep == "":
-            return self._hard_split(text)
+            return self._slice_oversized(text)
 
         parts = text.split(sep)
         out: list[str] = []
         for part in parts:
-            part = part + sep if sep else part
+            part = part + sep
             if self._counter.count(part) <= self._target:
                 if part.strip():
                     out.append(part)
@@ -54,17 +54,10 @@ class RecursiveChunker:
                 out.extend(self._split(part, rest))
         return out
 
-    def _hard_split(self, text: str) -> list[str]:
-        words = text.split(" ")
-        out, cur = [], []
-        for w in words:
-            cur.append(w)
-            if self._counter.count(" ".join(cur)) >= self._target:
-                out.append(" ".join(cur))
-                cur = []
-        if cur:
-            out.append(" ".join(cur))
-        return out
+    def _slice_oversized(self, blob: str) -> list[str]:
+        ratio = max(1, len(blob)) // max(1, self._counter.count(blob))
+        span = max(1, (self._target * ratio) // 2)
+        return [blob[i:i + span] for i in range(0, len(blob), span)]
 
     def _merge_with_overlap(self, pieces: list[str]) -> list[str]:
         if not pieces:

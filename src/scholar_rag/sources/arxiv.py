@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import re
-import random
 import xml.etree.ElementTree as ET
 from datetime import datetime, timezone
 
@@ -11,7 +10,7 @@ from tenacity import (
     retry,
     retry_if_exception_type,
     stop_after_attempt,
-    wait_exponential, wait_exponential_jitter,
+    wait_exponential_jitter,
 )
 
 from scholar_rag.models import RawDocument
