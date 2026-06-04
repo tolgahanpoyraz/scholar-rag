@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import re
+import random
 import xml.etree.ElementTree as ET
 from datetime import datetime, timezone
 
@@ -10,7 +11,7 @@ from tenacity import (
     retry,
     retry_if_exception_type,
     stop_after_attempt,
-    wait_exponential,
+    wait_exponential, wait_exponential_jitter,
 )
 
 from scholar_rag.models import RawDocument
@@ -117,8 +118,8 @@ class ArxivSource(DocumentSource):
 
     @retry(
         retry=retry_if_exception_type((_RetryableHTTP, httpx.TimeoutException)),
-        wait=wait_exponential(multiplier=1, min=3, max=30),
-        stop=stop_after_attempt(4),
+        wait=wait_exponential_jitter(initial=3, max=60),
+        stop=stop_after_attempt(6),
         reraise=True,
     )
     def _get(self, url: str, params: dict | None = None) -> httpx.Response:
