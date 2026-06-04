@@ -4,7 +4,7 @@ import re
 import xml.etree.ElementTree as ET
 from datetime import datetime, timezone
 
-import fitz
+from scholar_rag.sources.pdf_text import extract_text_from_bytes
 import httpx
 from tenacity import (
     retry,
@@ -105,7 +105,7 @@ class ArxivSource(DocumentSource):
         doc_id = _clean_id(doc_id)
         self._rate.wait()
         resp = self._get(url=_PDF_URL.format(doc_id=doc_id))
-        full_text = self._extract_pdf_text(resp.content)
+        full_text = extract_text_from_bytes(resp.content)
         return RawDocument(
             source=self.name,
             source_doc_id=doc_id,
@@ -114,12 +114,6 @@ class ArxivSource(DocumentSource):
             fetched_at=datetime.now(timezone.utc),
             raw={"pdf_bytes_len": len(resp.content)}
         )
-
-    @staticmethod
-    def _extract_pdf_text(pdf_bytes: bytes) -> str:
-        with fitz.open(stream=pdf_bytes, filetype="pdf") as doc:
-            return "\n".join(page.get_text() for page in doc)
-
 
     @retry(
         retry=retry_if_exception_type((_RetryableHTTP, httpx.TimeoutException)),
