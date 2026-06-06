@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from scholar_rag.chunking.tokenizer import TiktokenCounter, TokenCounter
 from scholar_rag.models import Chunk, RawDocument
+from scholar_rag.chunking.cleaning import clean_text
+from scholar_rag.chunking.sections import split_into_sections
 
 _DEFAULT_SEPARATORS = ["\n\n", "\n", ". ", " ", ""]
 
@@ -12,6 +14,9 @@ class RecursiveChunker:
             overlap_tokens: int = 40,
             counter: TokenCounter | None = None,
             separators: list[str] | None = None,
+            section_aware: bool = True,
+            clean: bool = True,
+            max_section_tokens: int = 2000,
     ) -> None:
         if overlap_tokens >= target_tokens:
             raise ValueError("overlap must be smaller than target")
@@ -19,21 +24,39 @@ class RecursiveChunker:
         self._overlap = overlap_tokens
         self._counter = counter or TiktokenCounter()
         self._separators = separators or _DEFAULT_SEPARATORS
+        self._section_aware = section_aware
+        self._clean = clean
+        self._max_section_tokens = max_section_tokens
 
     def chunk_document(self, doc: RawDocument) -> list[Chunk]:
-        pieces = self._split(doc.full_text, self._separators)
-        merged = self._merge_with_overlap(pieces)
-        return [
-            Chunk(
-                source=doc.source,
-                source_doc_id=doc.source_doc_id,
-                chunk_index=i,
-                text=text,
-                title=doc.title or None,
-                categories=doc.categories,
-            )
-            for i, text in enumerate(merged)
-        ]
+        text = clean_text(doc.full_text) if self._clean else doc.full_text
+
+        segments = split_into_sections(text) if self._section_aware else [(None, text)]
+
+        chunks: list[Chunk] = []
+        idx = 0
+        for section_name, seg_text in segments:
+            pieces = self._split(seg_text, self._separators)
+            merged = self._merge_with_overlap(pieces)
+            tokens_in_section = 0
+            for piece_text in merged:
+                label = section_name
+                if section_name is not None and tokens_in_section >= self._max_section_tokens:
+                    label = None
+                chunks.append(
+                    Chunk(
+                        source=doc.source,
+                        source_doc_id=doc.source_doc_id,
+                        chunk_index=idx,
+                        text=piece_text,
+                        section=label,
+                        title=doc.title or None,
+                        categories=doc.categories,
+                    )
+                )
+                tokens_in_section += self._counter.count(piece_text)
+                idx += 1
+        return chunks
 
     def _split(self, text: str, separators: list[str]) -> list[str]:
         if self._counter.count(text) <= self._target:
