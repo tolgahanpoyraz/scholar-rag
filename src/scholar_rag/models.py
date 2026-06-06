@@ -41,3 +41,10 @@ class RetrievedChunk(BaseModel):
     chunk: Chunk
     score: float
     retrieval_source: str = Field(default="unknown", description="e.g. 'dense', 'bm25', 'fused', 'reranked'.")
+
+
+class Answer(BaseModel):
+    """A generated answer grounded in retrieved context."""
+    text: str
+    citations: list[RetrievedChunk] = Field(default_factory=list)
+
