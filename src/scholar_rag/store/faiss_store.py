@@ -80,3 +80,6 @@ class FaissVectorStore(VectorStore):
             store._chunks = [Chunk.model_validate_json(line) for line in f if line.strip()]
         store._seen = {c.chunk_id for c in store._chunks}
         return store
+
+    def all_chunks(self) -> list[Chunk]:
+        return list(self._chunks)
