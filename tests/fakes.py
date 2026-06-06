@@ -4,6 +4,8 @@ import hashlib
 import math
 
 from scholar_rag.embedding.base import Embedder
+from scholar_rag.generation.base import Generator
+from scholar_rag.models import Answer, RetrievedChunk
 
 class FakeEmbedder(Embedder):
     def __init__(self, dimension: int = 8) -> None:
@@ -21,3 +23,8 @@ class FakeEmbedder(Embedder):
             norm = math.sqrt(sum(x * x for x in vec)) or 1.0
             out.append([x / norm for x in vec])
         return out
+
+class FakeGenerator(Generator):
+    def generate(self, query: str, chunks: list[RetrievedChunk]) -> Answer:
+        cited = ", ".join(f"[{i}]" for i in range(1, len(chunks) + 1)) or "(none)"
+        return Answer(text=f"Answer to '{query}' grounded in {cited}.", citations=chunks)
