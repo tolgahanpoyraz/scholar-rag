@@ -17,3 +17,5 @@ data/
 .idea/
 
 scripts/
+!scripts/bench_bm25.py
+!scripts/ingest_corpus.py
