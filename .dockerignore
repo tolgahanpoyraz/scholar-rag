@@ -1,0 +1,14 @@
+# Keep the build context small: ship only src/ + data/index/.
+.git
+.venv
+**/__pycache__
+*.pyc
+.pytest_cache
+.ruff_cache
+.ruff_cache/
+.idea
+data/pdfs
+data/eval
+data/feedback.db
+.env
+README.md
