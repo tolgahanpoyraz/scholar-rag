@@ -53,6 +53,9 @@ repo directly via Git LFS.
    - `OPENROUTER_API_KEY` (secret) — your key.
    - `SCHOLAR_RAG_CORS_ORIGINS` (variable) — the Vercel URL (set after step 2 below),
      e.g. `https://scholar-rag-web.vercel.app`.
+   - Optional rate-limit variables guarding `/ask` (defaults shown) — lower the
+     daily one to cap OpenRouter spend: `SCHOLAR_RAG_RATE_PER_IP_MIN` (8),
+     `SCHOLAR_RAG_RATE_GLOBAL_MIN` (30), `SCHOLAR_RAG_RATE_GLOBAL_DAY` (500).
 
 5. Commit & push:
 

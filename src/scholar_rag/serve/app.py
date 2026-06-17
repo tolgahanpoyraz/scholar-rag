@@ -11,19 +11,29 @@ import logging
 import os
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, HTTPException, Response
+from fastapi import FastAPI, HTTPException, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 
 from scholar_rag.config import load_config
 from scholar_rag.serve.engine import RagEngine
 from scholar_rag.serve.feedback_store import FeedbackStore
+from scholar_rag.serve.ratelimit import RateLimiter, client_ip
 from scholar_rag.serve.schemas import (
     AskRequest,
     AskResponse,
     FeedbackRequest,
     SourceOut,
 )
+
+# Shared across requests; protects the OpenRouter-calling endpoints.
+rate_limiter = RateLimiter()
+
+
+def _enforce_rate_limit(request: Request) -> None:
+    reason = rate_limiter.check(client_ip(request))
+    if reason:
+        raise HTTPException(status_code=429, detail=reason, headers={"Retry-After": "60"})
 
 logger = logging.getLogger("scholar_rag.serve")
 
@@ -63,8 +73,9 @@ def health() -> dict:
 
 
 @app.post("/ask", response_model=AskResponse)
-def ask(req: AskRequest) -> AskResponse:
+def ask(req: AskRequest, request: Request) -> AskResponse:
     """Answer one question with cited passages, and persist it for rating."""
+    _enforce_rate_limit(request)
     engine: RagEngine = app.state.engine
     store: FeedbackStore = app.state.feedback
     try:
@@ -92,9 +103,10 @@ def ask(req: AskRequest) -> AskResponse:
 
 
 @app.post("/ask/stream")
-def ask_stream(req: AskRequest) -> StreamingResponse:
+def ask_stream(req: AskRequest, request: Request) -> StreamingResponse:
     """Same as /ask, but streamed as NDJSON events: one `sources` event, many
     `token` events, then a final `done` event with the persisted answer_id."""
+    _enforce_rate_limit(request)
     engine: RagEngine = app.state.engine
     store: FeedbackStore = app.state.feedback
 
