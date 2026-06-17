@@ -1,5 +1,7 @@
 # Scholar-RAG
 
+**🔎 Live demo: [scholar-rag-web.vercel.app](https://scholar-rag-web.vercel.app)** &nbsp;·&nbsp; API: [HF Space](https://tpoyraz22-scholar-rag.hf.space/health)
+
 A retrieval-augmented question-answering system over academic papers. Ask a
 question in plain language and get a synthesized answer that is **grounded only
 in the ingested corpus**, with inline citations back to the exact passage,
