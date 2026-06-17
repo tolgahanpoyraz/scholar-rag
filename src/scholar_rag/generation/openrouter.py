@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+from collections.abc import Iterator
 
 from scholar_rag.generation.base import Generator
 from scholar_rag.generation.prompt import SYSTEM_PROMPT, build_user_prompt
@@ -32,14 +33,28 @@ class OpenRouterGenerator(Generator):
         self._model = model
         self._temperature = temperature
 
+    def _messages(self, query: str, chunks: list[RetrievedChunk]) -> list[dict]:
+        return [
+            {"role": "system", "content": SYSTEM_PROMPT},
+            {"role": "user", "content": build_user_prompt(query, chunks)},
+        ]
+
     def generate(self, query: str, chunks: list[RetrievedChunk]) -> Answer:
         resp = self._client.chat.completions.create(
             model=self._model,
             temperature=self._temperature,
-            messages=[
-                {"role": "system", "content": SYSTEM_PROMPT},
-                {"role": "user", "content": build_user_prompt(query, chunks)},
-            ],
+            messages=self._messages(query, chunks),
         )
         text = resp.choices[0].message.content or ""
         return Answer(text=text, citations=chunks)
+
+    def generate_stream(self, query: str, chunks: list[RetrievedChunk]) -> Iterator[str]:
+        stream = self._client.chat.completions.create(
+            model=self._model,
+            temperature=self._temperature,
+            messages=self._messages(query, chunks),
+            stream=True,
+        )
+        for chunk in stream:
+            if chunk.choices and (delta := chunk.choices[0].delta.content):
+                yield delta

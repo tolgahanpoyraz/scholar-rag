@@ -10,11 +10,13 @@ it a question string, it gives you back an `Answer` (see scholar_rag/models.py).
 """
 from __future__ import annotations
 
+from collections.abc import Iterator
+
 from scholar_rag.config import Config, load_config
 from scholar_rag.embedding.sentence_transformer import SentenceTransformerEmbedder
 from scholar_rag.generation.base import Generator
 from scholar_rag.generation.openrouter import OpenRouterGenerator
-from scholar_rag.models import Answer
+from scholar_rag.models import Answer, RetrievedChunk
 from scholar_rag.retrieval.base import Retriever
 from scholar_rag.retrieval.bm25 import BM25Retriever
 from scholar_rag.retrieval.dense import DenseRetriever
@@ -74,5 +76,13 @@ class RagEngine:
         If retrieval finds nothing, the generator is told there are no passages
         and is prompted to say it can't answer — we never fabricate sources.
         """
-        chunks = self._retriever.retrieve(question, k=self._top_k)
-        return self._generator.generate(question, chunks)
+        return self._generator.generate(question, self.retrieve(question))
+
+    def retrieve(self, question: str) -> list[RetrievedChunk]:
+        """The retrieval half of `ask`, exposed so the streaming endpoint can
+        send the sources to the client before generation begins."""
+        return self._retriever.retrieve(question, k=self._top_k)
+
+    def stream(self, question: str, chunks: list[RetrievedChunk]) -> Iterator[str]:
+        """The generation half: yield answer text pieces for already-retrieved chunks."""
+        return self._generator.generate_stream(question, chunks)

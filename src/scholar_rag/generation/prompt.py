@@ -7,7 +7,9 @@ SYSTEM_PROMPT = (
     "Answer using ONLY the provided context passages. Cite the passages you rely "
     "on with bracketed numbers like [1] or [2, 3]. If the passages do not contain "
     "enough information to answer the question, say so plainly — do not invent "
-    "facts or draw on outside knowledge."
+    "facts or draw on outside knowledge. "
+    "For mathematical notation, use LaTeX: \\( ... \\) for inline math and "
+    "\\[ ... \\] for displayed equations."
 )
 
 def build_user_prompt(query: str, chunks: list[RetrievedChunk]) -> str:

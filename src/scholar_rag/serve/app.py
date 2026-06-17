@@ -6,12 +6,14 @@ into the JSON contract from schemas.py.
 """
 from __future__ import annotations
 
+import json
 import logging
 import os
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, HTTPException, Response
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import StreamingResponse
 
 from scholar_rag.config import load_config
 from scholar_rag.serve.engine import RagEngine
@@ -87,6 +89,45 @@ def ask(req: AskRequest) -> AskResponse:
         answer=answer.text,
         sources=sources,
     )
+
+
+@app.post("/ask/stream")
+def ask_stream(req: AskRequest) -> StreamingResponse:
+    """Same as /ask, but streamed as NDJSON events: one `sources` event, many
+    `token` events, then a final `done` event with the persisted answer_id."""
+    engine: RagEngine = app.state.engine
+    store: FeedbackStore = app.state.feedback
+
+    def event(obj: dict) -> str:
+        return json.dumps(obj) + "\n"
+
+    def emit():
+        try:
+            chunks = engine.retrieve(req.question)
+        except Exception:
+            logger.exception("retrieve failed for %r", req.question)
+            yield event({"type": "error", "detail": "retrieval_failed"})
+            return
+
+        sources = [SourceOut.from_retrieved(i, rc) for i, rc in enumerate(chunks, start=1)]
+        source_dicts = [s.model_dump() for s in sources]
+        yield event({"type": "sources", "sources": source_dicts})
+
+        parts: list[str] = []
+        try:
+            for delta in engine.stream(req.question, chunks):
+                parts.append(delta)
+                yield event({"type": "token", "text": delta})
+        except Exception:
+            logger.exception("stream generation failed for %r", req.question)
+            yield event({"type": "error", "detail": "generation_failed"})
+            return
+
+        # Persist the finished answer (same record as /ask) and hand back its id.
+        answer_id = store.record_answer(req.question, "".join(parts), source_dicts)
+        yield event({"type": "done", "answer_id": answer_id})
+
+    return StreamingResponse(emit(), media_type="application/x-ndjson")
 
 
 @app.post("/feedback", status_code=204)
