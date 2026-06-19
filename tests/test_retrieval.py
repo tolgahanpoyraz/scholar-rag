@@ -11,7 +11,11 @@ def _chunk(idx: int, text: str) -> Chunk:
 
 
 def test_tokenize_lowercases_and_splits():
-    assert tokenize("ERN(G) is split") == ["ern", "g", "is", "split"]
+    assert tokenize("ERN(G) is split") == ["ern", "g", "split"]
+
+
+def test_tokenize_drops_stopwords():
+    assert tokenize("the spectral properties of a graph") == ["spectral", "properties", "graph"]
 
 
 def test_bm25_ranks_exact_term_first():

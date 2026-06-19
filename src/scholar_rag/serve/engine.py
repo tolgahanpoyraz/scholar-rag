@@ -18,7 +18,7 @@ from scholar_rag.generation.base import Generator
 from scholar_rag.generation.openrouter import OpenRouterGenerator
 from scholar_rag.models import Answer, RetrievedChunk
 from scholar_rag.retrieval.base import Retriever
-from scholar_rag.retrieval.bm25 import BM25Retriever
+from scholar_rag.retrieval.rust_bm25 import InvertedRustBM25Retriever
 from scholar_rag.retrieval.dense import DenseRetriever
 from scholar_rag.retrieval.hybrid import HybridRetriever
 from scholar_rag.store.faiss_store import FaissVectorStore
@@ -52,7 +52,7 @@ class RagEngine:
         embedder = SentenceTransformerEmbedder(config.embedding_model)
         store = FaissVectorStore.load(index_dir, embedder)
 
-        bm25 = BM25Retriever()
+        bm25 = InvertedRustBM25Retriever()
         bm25.add(store.all_chunks())
         retriever = HybridRetriever([DenseRetriever(store), bm25])
 

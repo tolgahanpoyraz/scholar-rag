@@ -26,9 +26,10 @@ repo directly via Git LFS.
    ```bash
    git clone https://huggingface.co/spaces/<user>/scholar-rag space && cd space
 
-   # code + deploy recipe (from this repo)
-   cp -r ../scholar-rag/src ../scholar-rag/pyproject.toml ../scholar-rag/uv.lock \
-         ../scholar-rag/Dockerfile .
+   # code + deploy recipe (from this repo). `rust/` is the BM25 extension crate
+   # the Dockerfile compiles during the build 
+   cp -r ../scholar-rag/src ../scholar-rag/rust ../scholar-rag/pyproject.toml \
+         ../scholar-rag/uv.lock ../scholar-rag/Dockerfile .
 
    # the prebuilt index, via LFS (it's large)
    git lfs install

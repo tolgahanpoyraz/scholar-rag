@@ -87,12 +87,35 @@ class RustBM25Retriever(Retriever):
         term_ids = list(counts.keys())
         idfs = [self._idf(tid, n) * cnt for tid, cnt in counts.items()]
 
-        scores = self._index.score(term_ids, idfs)
-
-        ranked = sorted(
-            ((s, i) for i, s in enumerate(scores) if s > 0), reverse=True
-        )[:k]
+        # Rust does the scan AND the top-k selection; we just get k winners back.
+        ranked = self._index.top_k(term_ids, idfs, k)
         return [
             RetrievedChunk(chunk=self._chunks[i], score=float(s), retrieval_source="bm25")
             for s, i in ranked
         ]
+
+
+class InvertedRustBM25Retriever(RustBM25Retriever):
+    def _build_index(self) -> None:
+        vocab_size = len(self._vocab)
+        bucket_docs: list[list[int]] = [[] for _ in range(vocab_size)]
+        bucket_freqs: list[list[int]] = [[] for _ in range(vocab_size)]
+        lens: list[float] = []
+        for doc_idx, tf in enumerate(self._tfs):
+            lens.append(float(sum(tf.values())))
+            for tid, f in tf.items():
+                bucket_docs[tid].append(doc_idx)
+                bucket_freqs[tid].append(f)
+
+        term_offsets = [0]
+        posting_docs: list[int] = []
+        posting_freqs: list[int] = []
+        for tid in range(vocab_size):
+            posting_docs.extend(bucket_docs[tid])
+            posting_freqs.extend(bucket_freqs[tid])
+            term_offsets.append(len(posting_docs))
+
+        self._avgdl = (sum(lens) / len(lens)) if lens else 0.0
+        self._index = _rs.Bm25Inverted(
+            term_offsets, posting_docs, posting_freqs, lens, self._avgdl, self._k1, self._b
+        )

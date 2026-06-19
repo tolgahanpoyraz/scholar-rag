@@ -8,8 +8,18 @@ from scholar_rag.retrieval.base import Retriever
 
 _TOKEN_RE = re.compile(r"\w+")
 
+_STOPWORDS = frozenset(
+    """
+    a an the and or but if then else of to in on at by for with from into over
+    under again further is are was were be been being am do does did doing have
+    has had having this that these those it its as not no nor so than too very
+    can will just we you your they them their he she his her i me my our us
+    """.split()
+)
+
+
 def tokenize(text: str) -> list[str]:
-    return _TOKEN_RE.findall(text.lower())
+    return [t for t in _TOKEN_RE.findall(text.lower()) if t not in _STOPWORDS]
 
 class BM25Retriever(Retriever):
     def __init__(self, k1: float = 1.5, b: float = 0.75) -> None:

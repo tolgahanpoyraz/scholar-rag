@@ -10,5 +10,6 @@
 data/pdfs
 data/eval
 data/feedback.db
+rust/target
 .env
 README.md

@@ -21,7 +21,8 @@ query ────────────────────────�
 - **Embeddings** — `sentence-transformers/all-MiniLM-L6-v2` (`embedding/`).
 - **Vector store** — FAISS (`store/`); config has hooks for a Postgres + pgvector backend.
 - **Retrieval** — **hybrid**: dense (FAISS) + BM25, fused with Reciprocal Rank
-  Fusion (`retrieval/`).
+  Fusion (`retrieval/`). BM25 is a **Rust extension** (`rust/`, via PyO3) using an
+  inverted index. See [Performance](#performance).
 - **Generation** — OpenRouter, prompted to cite passages as `[1]`, `[2, 3]` and
   to refuse when the context is insufficient (`generation/`).
 - **API** — FastAPI, with token streaming and feedback capture (`serve/`).
@@ -31,6 +32,10 @@ query ────────────────────────�
 
 ```bash
 uv sync
+
+# build the Rust BM25 extension into the venv (required; rerun after Rust edits)
+uv run maturin develop --release --manifest-path rust/Cargo.toml --uv
+
 export OPENROUTER_API_KEY=...           # or put it in .env
 
 # build the index from PDFs in data/pdfs/
@@ -55,11 +60,18 @@ KMP_DUPLICATE_LIB_OK=TRUE OMP_NUM_THREADS=1 \
 The API runs as a Docker image on Hugging Face Spaces; the web frontend is a
 separate project deployed to Vercel. See [DEPLOY.md](DEPLOY.md).
 
-## Roadmap
+## Performance
 
-**Next up: a parallel BM25 retriever in Rust.** The current BM25 (`retrieval/bm25.py`)
-is pure Python and scores a query by scanning *every* chunk, single-threaded —
-about **59 ms mean / 17 queries-per-second** over an 85k-chunk corpus. Replacing
-it with a Rust implementation (inverted index + parallelism) should cut query
-latency by orders of magnitude. `scripts/bench_bm25.py` captures the Python
-baseline to compare against.
+BM25 was rewritten as a Rust extension (`rust/`, via PyO3). On the full corpus
+(85,558 chunks, 10-core M-series, top-k=10):
+
+| Implementation | Mean latency | Speedup |
+|---|---:|---:|
+| Pure Python, linear scan | ~57 ms | 1× |
+| Rust, parallel linear scan | ~6 ms | ~9× |
+| Rust, inverted index | 0.26 ms | ~220× |
+| Rust, inverted index + stopwords | 0.097 ms | ~590× |
+
+Most of the win is from the inverted index. It scores only the documents that
+contain a query's terms instead of scanning all 85k, so the serial inverted index
+beats the parallel full scan by ~27×. Dropping stopwords shrinks the rest. 
