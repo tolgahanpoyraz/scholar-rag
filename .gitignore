@@ -19,3 +19,5 @@ data/
 scripts/
 !scripts/bench_bm25.py
 !scripts/ingest_corpus.py
+# Rust build artifacts
+rust/target/

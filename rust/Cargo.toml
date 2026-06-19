@@ -1,0 +1,12 @@
+[package]
+name = "scholar_rag_bm25"
+version = "0.1.0"
+edition = "2021"       
+
+[lib]
+name = "scholar_rag_bm25"
+crate-type = ["cdylib"]
+
+[dependencies]
+pyo3 = { version = "0.23", features = ["extension-module"] }
+rayon = "1"
